@@ -1,6 +1,9 @@
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { headers } from "next/headers";
 import { Webhook } from "svix";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function POST(req: Request) {
   const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
@@ -37,12 +40,37 @@ export async function POST(req: Request) {
     return new Response("Error: Verification error", { status: 400 });
   }
 
-  const { id } = evt.data;
   const eventType = evt.type;
-  console.log("Received webhook event:", {
-    id,
-    type: eventType,
-    data: evt.data,
-  });
+
+  if (eventType === "user.created") {
+    const data = evt.data;
+    await db.insert(users).values({
+      clerkId: data.id,
+      name: `${data.first_name} ${data.last_name}`,
+      imageUrl: data.image_url,
+    });
+  }
+
+  if (eventType === "user.deleted") {
+    const { data } = evt;
+
+    if (!data.id) {
+      return new Response("Missing user id", { status: 400 });
+    }
+
+    await db.delete(users).where(eq(users.clerkId, data.id));
+  }
+
+  if (eventType === "user.updated") {
+    const { data } = evt;
+    await db
+      .update(users)
+      .set({
+        name: `${data.first_name} ${data.last_name}`,
+        imageUrl: data.image_url,
+      })
+      .where(eq(users.clerkId, data.id));
+  }
+
   return new Response("Webhook received", { status: 200 });
 }

@@ -6,7 +6,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const user = pgTable(
+export const users = pgTable(
   "users",
   {
     id: uuid("id").primaryKey().defaultRandom(),
