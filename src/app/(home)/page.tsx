@@ -1,5 +1,7 @@
-import Image from "next/image";
+"use client";
+import { trpc } from "@/trpc/client";
 
 export default function Home() {
-  return <div>I will load videos in the future</div>;
+  const { data } = trpc.hello.useQuery({ text: "john" });
+  return <div>Client component says: {data?.greeting} </div>;
 }
